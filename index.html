@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Моя Платформа</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif; }
+  
+  body {
+    margin: 0;
+    background: #222;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  #app {
+    position: relative;
+    width: 100vw;
+    max-width: 400px;
+    height: 100vh;
+    max-height: 800px;
+    background: #900000;
+    border: 8px solid #000;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; padding: 20px; overflow-y: auto;}
+  .screen.active { display: flex; }
+
+  /* === ГЛАВНОЕ МЕНЮ === */
+  #screen-menu { background: #8b0000; }
+  
+  /* ПРОФИЛЬ В ПРАВОМ ВЕРХНЕМ УГЛУ */
+  .profile-widget {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,0.6);
+    padding: 5px 10px 5px 5px;
+    border-radius: 20px;
+    border: 3px solid #000;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .profile-widget:active { transform: scale(0.95); }
+  .profile-avatar {
+    width: 35px; height: 35px; border-radius: 50%; border: 2px solid #00ffff;
+    background: #fff; object-fit: cover; margin-right: 8px;
+  }
+  .profile-name { font-size: 14px; font-weight: bold; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+
+  .menu-title { margin-top: 60px; font-size: 28px; text-align: center; text-shadow: 2px 2px 0 #000; }
+
+  .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+  .game-btn {
+    background: #00ffff; border: 5px solid #000; border-radius: 15px;
+    height: 120px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; cursor: pointer; text-align: center; font-weight: bold; color: #000;
+  }
+  .game-btn:active { transform: scale(0.95); }
+  
+  /* Кнопки внизу меню (Настройки и Лидеры) */
+  .bottom-menu {
+    position: absolute; bottom: 20px; left: 20px; right: 20px;
+    display: flex; justify-content: space-between;
+  }
+  .icon-btn {
+    width: 60px; height: 60px;
+    background: #000; border-radius: 50%; display: flex; justify-content: center;
+    align-items: center; cursor: pointer; border: 4px solid #fff; font-size: 24px;
+  }
+
+  /* === ЭКРАНЫ ИГР === */
+  #screen-game { background: #111; padding: 0; overflow: hidden;}
+  .back-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 50;
+    background: #e94560; border: 3px solid #000; color: #fff;
+    padding: 8px 15px; font-weight: bold; border-radius: 10px; cursor: pointer;
+  }
+
+  /* Игра 1: Поймай телефон */
+  #game-catch { width: 100%; height: 100%; background: linear-gradient(#1a2a6c, #b21f1f); position: relative; overflow: hidden; display: none; }
+  #basket { position: absolute; bottom: 10px; width: 80px; height: 25px; background: #00d9ff; border: 3px solid #000; border-radius: 10px; left: 120px; z-index: 2; }
+  .phone { position: absolute; width: 30px; height: 55px; background: #000; border-radius: 6px; border: 2px solid #fff; }
+  .phone::before { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; height: 38px; background: #00ffff; border-radius: 3px; }
+
+  /* Игра 2: Нажми на круг */
+  #game-tap { width: 100%; height: 100%; background: #222; position: relative; display: none; }
+  .tap-circle { position: absolute; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, #00d9ff, #000); border: 3px solid #000; cursor: pointer; box-shadow: 0 0 15px #00d9ff; }
+
+  /* Игра 3: Паркур */
+  #game-parkour { width: 100%; height: 100%; background: #87CEEB; position: relative; display: none; overflow: hidden; }
+  #parkour-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .parkour-controls { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 20px; pointer-events: none; }
+  .parkour-btn { width: 60px; height: 60px; background: rgba(0,0,0,0.5); border: 3px solid #fff; border-radius: 50%; color: #fff; font-size: 24px; font-weight: bold; display: flex; justify-content: center; align-items: center; pointer-events: auto; user-select: none; cursor: pointer; }
+  .parkour-btn:active { background: rgba(0,255,255,0.7); }
+  .parkour-right-group { display: flex; gap: 15px; }
+
+  /* Игра 4: Рисуй */
+  #game-draw { width: 100%; height: 100%; background: #ddd; display: none; flex-direction: column; position: relative;}
+  .draw-toolbar { height: 60px; background: #000; display: flex; justify-content: space-around; align-items: center; padding: 5px; }
+  .tool-btn { background: #333; color: #fff; border: 2px solid #fff; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+  .tool-btn.active { background: #00ffff; color: #000; }
+  #canvas-container { flex-grow: 1; position: relative; background: #fff; margin: 10px; border: 4px solid #000; border-radius: 10px; overflow: hidden; display: none;}
+  canvas { position: absolute; top: 0; left: 0; cursor: crosshair; touch-action: none; }
+  
+  #draw-gallery { position: absolute; inset: 0; background: #00ffff; display: flex; flex-direction: column; align-items: center; padding: 20px; z-index: 10;}
+  .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 20px;}
+  .gallery-slot { background: #fff; border: 3px solid #000; border-radius: 10px; height: 100px; display: flex; justify-content: center; align-items: center; cursor: pointer; overflow: hidden; }
+  .gallery-slot img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-slot.add-new { font-size: 30px; font-weight: bold; }
+
+  /* === НАСТРОЙКИ И ЛИДЕРБОРД === */
+  #screen-settings, #screen-leaderboard { background: #222; }
+  .settings-card { background: #333; border: 3px solid #00ffff; border-radius: 15px; padding: 20px; margin-top: 20px; text-align: center; }
+  .settings-card a { color: #00ffff; font-size: 20px; text-decoration: none; font-weight: bold; }
+
+  /* Лидерборд */
+  .lb-tabs { display: flex; margin-top: 20px; gap: 5px; }
+  .lb-tab { flex: 1; padding: 10px 5px; background: #333; border: 2px solid #555; color: #fff; text-align: center; cursor: pointer; border-radius: 10px 10px 0 0; font-size: 12px; font-weight: bold;}
+  .lb-tab.active { background: #00ffff; color: #000; border-color: #00ffff; }
+  .lb-list { background: #333; border: 2px solid #00ffff; border-radius: 0 0 10px 10px; padding: 10px; flex-grow: 1; overflow-y: auto;}
+  .lb-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #555; font-size: 16px; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row.me { background: rgba(233, 69, 96, 0.3); border-radius: 5px; font-weight: bold; color: #00ffff;}
+  .lb-rank { width: 30px; font-weight: bold; }
+  .lb-name { flex-grow: 1; margin-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+  .lb-score { font-weight: bold; }
+  .lb-rank.gold { color: gold; }
+  .lb-rank.silver { color: silver; }
+  .lb-rank.bronze { color: #cd7f32; }
+
+  /* === МОДАЛЬНЫЕ ОКНА === */
+  .modal { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; z-index: 100; text-align: center; }
+  .modal.active { display: flex; }
+  .modal input[type="text"] { padding: 10px; font-size: 18px; border-radius: 10px; border: 3px solid #00ffff; width: 80%; margin-bottom: 15px; text-align: center; font-family: inherit;}
+  .avatar-options { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+  .avatar-opt { width: 50px; height: 50px; font-size: 30px; display: flex; justify-content: center; align-items: center; background: #fff; border: 3px solid #000; border-radius: 50%; cursor: pointer; }
+  .avatar-opt.selected { border-color: #e94560; transform: scale(1.1); }
+
+  #color-modal { background: rgba(0,0,0,0.8); display: none; position: absolute; inset: 0; z-index: 50; justify-content: center; align-items: center; }
+  .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #fff; padding: 20px; border-radius: 15px; border: 4px solid #000;}
+  .color-box { width: 40px; height: 40px; border: 2px solid #000; cursor: pointer; }
+
+  #record-toast { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: #e94560; color: #fff; padding: 15px 30px; border-radius: 15px; border: 4px solid #fff; font-size: 20px; font-weight: bold; display: none; z-index: 200; text-align: center; animation: pop 0.5s ease; }
+  @keyframes pop { 0% { transform: translateX(-50%) scale(0); } 100% { transform: translateX(-50%) scale(1); } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="record-toast">🏆 НОВЫЙ РЕКОРД!</div>
+
+  <!-- ГЛАВНОЕ МЕНЮ -->
+  <div id="screen-menu" class="screen active">
+    
+    <!-- Профиль справа сверху -->
+    <div class="profile-widget" onclick="resetProfile()">
+      <img src="" id="menu-avatar" class="profile-avatar">
+      <div class="profile-name" id="menu-name">Игрок</div>
+    </div>
+
+    <div class="menu-title">Мини-Игры</div>
+
+    <div class="menu-grid">
+      <div class="game-btn" onclick="openGame('catch')">
+        <div style="font-size: 30px;">📱</div>поймай<br>телефон
+      </div>
+      <div class="game-btn" onclick="openGame('tap')">
+        <div style="font-size: 30px; width:20px; height:20px; background:#000; border-radius:50%; margin-bottom:10px;"></div>нажми<br>на круг
+      </div>
+      <div class="game-btn" onclick="openGame('parkour')">
+        <div style="font-size: 30px;">🏃</div>паркур
+      </div>
+      <div class="game-btn" style="background: #fff;" onclick="openGame('draw')">
+        <div style="font-size: 30px;">✏️</div>рисуй
+      </div>
+    </div>
+
+    <div class="bottom-menu">
+      <div class="icon-btn" onclick="showScreen('leaderboard'); switchLBTab('catch');">🏆</div>
+      <div class="icon-btn" onclick="showScreen('settings')">⚙️</div>
+    </div>
+  </div>
+
+  <!-- ТАБЛИЦА ЛИДЕРОВ -->
+  <div id="screen-leaderboard" class="screen">
+    <button class="back-btn" onclick="showScreen('menu')">Назад</button>
+    <h2 style="margin-top: 50px; text-align: center;">Таблица лидеров</h2>
+    
+    <div class="lb-tabs">
+      <div class="lb-tab" onclick="switchLBTab('catch')" id="tab-catch">Телефоны</div>
+      <div class="lb-tab" onclick="switchLBTab('tap')" id="tab-tap">Круги</div>
+      <div class="lb-tab" onclick="switchLBTab('parkour')" id="tab-parkour">Паркур</div>
+    </div>
+    
+    <div class="lb-list" id="lb-list">
+      <!-- Сюда вставляются строки -->
+    </div>
+  </div>
+
+  <!-- ЭКРАН НАСТРОЕК -->
+  <div id="screen-settings" class="screen">
+    <button class="back-btn" onclick="showScreen('menu')">Назад</button>
+    <h2 style="margin-top: 50px; text-align: center;">Настройки</h2>
+    <div class="settings-card">
+      <p>Моя поддержка:</p>
+      <a href="https://t.me/NEXV0RX" target="_blank">Telegram: @NEXV0RX</a>
+    </div>
+  </div>
+
+  <!-- ЭКРАН ИГР (Без изменений) -->
+  <div id="screen-game" class="screen">
+    <button class="back-btn" onclick="closeGame()">В меню</button>
+
+    <!-- Игра 1 -->
+    <div id="game-catch">
+      <div style="position:absolute; top:10px; left:10px; font-size:20px; color:#fff; font-weight:bold; z-index:10;">Счёт: <span id="score-catch">0</span> | Рекорд: <span id="best-catch">0</span></div>
+      <div id="basket"></div>
+      <div id="catch-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:20;">
+        <button class="tool-btn" style="font-size:20px; padding:15px 30px;" onclick="startCatch()">Играть</button>
+      </div>
+    </div>
+
+    <!-- Игра 2 -->
+    <div id="game-tap">
+      <div style="position:absolute; top:10px; left:10px; font-size:20px; color:#fff; font-weight:bold; z-index:10;">Счёт: <span id="score-tap">0</span> | Рекорд: <span id="best-tap">0</span></div>
+      <div id="tap-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:20;">
+         <button class="tool-btn" style="font-size:20px; padding:15px 30px;" onclick="startTap()">Играть</button>
+      </div>
+    </div>
+
+    <!-- Игра 3: Паркур -->
+    <div id="game-parkour">
+      <div style="position:absolute; top:10px; left:10px; font-size:16px; color:#000; font-weight:bold; z-index:10; background:rgba(255,255,255,0.7); padding:5px; border-radius:5px;">
+        Уровень: <span id="parkour-level">1</span> | Рекорд: <span id="best-parkour">0</span>
+      </div>
+      <canvas id="parkour-canvas"></canvas>
+      <div class="parkour-controls">
+        <div class="parkour-btn" id="btn-left">◀</div>
+        <div class="parkour-right-group">
+          <div class="parkour-btn" id="btn-jump">▲</div>
+          <div class="parkour-btn" id="btn-right">▶</div>
+        </div>
+      </div>
+      <div id="parkour-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:20;">
+        <div style="font-size:18px; margin-bottom:15px; color:#fff; text-align:center;">Прыгай через блоки и шипы!<br>Доберись до флага.</div>
+        <button class="tool-btn" style="font-size:20px; padding:15px 30px;" onclick="startParkour()">Играть</button>
+      </div>
+    </div>
+
+    <!-- Игра 4: Рисуй -->
+    <div id="game-draw">
+      <div id="draw-gallery">
+        <h2 style="margin:0;">Мои рисунки</h2>
+        <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+      <div id="draw-toolbar" style="display:none;" class="draw-toolbar">
+        <button class="tool-btn" onclick="saveCurrentDrawing()">Сохранить</button>
+        <button class="tool-btn" onclick="document.getElementById('color-modal').style.display='flex'">Цвет</button>
+        <button class="tool-btn" onclick="setTool('eraser')">Ластик</button>
+        <button class="tool-btn active" onclick="setTool('pencil')">Кисть</button>
+        <button class="tool-btn" onclick="showGallery()">Выход</button>
+      </div>
+      <div id="canvas-container">
+        <canvas id="draw-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ПРОФИЛЯ -->
+  <div id="modal-profile" class="modal">
+    <h2>Создай профиль</h2>
+    <input type="text" id="input-name" placeholder="Твой ник" maxlength="12">
+    <div class="avatar-options" id="avatar-list">
+      <div class="avatar-opt" onclick="selectAvatar('😎')">😎</div>
+      <div class="avatar-opt" onclick="selectAvatar('👾')">👾</div>
+      <div class="avatar-opt" onclick="selectAvatar('🔥')">🔥</div>
+      <div class="avatar-opt" onclick="selectAvatar('🐱')">🐱</div>
+      <div class="avatar-opt" onclick="selectAvatar('👽')">👽</div>
+    </div>
+    <label class="tool-btn" style="margin-bottom: 15px; display:inline-block;">
+      Загрузить фото
+      <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="loadCustomAvatar(event)">
+    </label>
+    <button class="tool-btn" style="font-size: 18px; padding: 10px 30px;" onclick="saveProfile()">Готово</button>
+  </div>
+
+  <!-- ВЫБОР ЦВЕТА -->
+  <div id="color-modal" onclick="closeColorModal(event)">
+    <div class="color-grid" onclick="event.stopPropagation()">
+      <div class="color-box" style="background:#000;" onclick="setColor('#000')"></div>
+      <div class="color-box" style="background:#ff0000;" onclick="setColor('#ff0000')"></div>
+      <div class="color-box" style="background:#00ff00;" onclick="setColor('#00ff00')"></div>
+      <div class="color-box" style="background:#0000ff;" onclick="setColor('#0000ff')"></div>
+      <div class="color-box" style="background:#ffff00;" onclick="setColor('#ffff00')"></div>
+      <div class="color-box" style="background:#ff00ff;" onclick="setColor('#ff00ff')"></div>
+      <div class="color-box" style="background:#00ffff;" onclick="setColor('#00ffff')"></div>
+      <div class="color-box" style="background:#ff8800;" onclick="setColor('#ff8800')"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === БАЗА ДАННЫХ ===
+function saveData(key, val) { try { localStorage.setItem(key, val); } catch(e) { alert("Память переполнена!"); } }
+function getData(key) { return localStorage.getItem(key); }
+
+function showRecord() {
+  const toast = document.getElementById('record-toast');
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 3000);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'menu') updateProfileUI();
+}
+
+function openGame(game) {
+  showScreen('game');
+  document.querySelectorAll('#screen-game > div[id^="game-"]').forEach(g => g.style.display = 'none');
+  
+  if (game === 'catch') { document.getElementById('game-catch').style.display = 'block'; resetCatch(); }
+  if (game === 'tap') { document.getElementById('game-tap').style.display = 'block'; resetTap(); }
+  if (game === 'parkour') { document.getElementById('game-parkour').style.display = 'block'; resetParkour(); }
+  if (game === 'draw') { document.getElementById('game-draw').style.display = 'flex'; initDraw(); }
+}
+
+function closeGame() {
+  showScreen('menu');
+  runningCatch = false;
+  runningTap = false;
+  runningParkour = false;
+  clearTimeout(tapTimeout);
+}
+
+// === ПРОФИЛЬ ===
+let currentAvatar = '😎';
+function updateProfileUI() {
+  const savedProfile = getData('profile');
+  if (savedProfile) {
+    const p = JSON.parse(savedProfile);
+    document.getElementById('menu-name').textContent = p.name;
+    document.getElementById('menu-avatar').src = p.avatar;
+  } else {
+    document.getElementById('modal-profile').classList.add('active');
+  }
+}
+
+function selectAvatar(emoji) {
+  currentAvatar = emoji;
+  document.querySelectorAll('.avatar-opt').forEach(el => el.classList.remove('selected'));
+  event.target.classList.add('selected');
+}
+
+function loadCustomAvatar(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      currentAvatar = event.target.result;
+      document.querySelectorAll('.avatar-opt').forEach(el => el.classList.remove('selected'));
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function saveProfile() {
+  const name = document.getElementById('input-name').value || 'Игрок';
+  saveData('profile', JSON.stringify({ name: name, avatar: currentAvatar }));
+  document.getElementById('modal-profile').classList.remove('active');
+  updateProfileUI();
+}
+
+function resetProfile() { 
+  document.getElementById('modal-profile').classList.add('active');
+  const saved = getData('profile');
+  if(saved) {
+    const p = JSON.parse(saved);
+    document.getElementById('input-name').value = p.name;
+  }
+}
+
+// ==========================================
+// === ТАБЛИЦА ЛИДЕРОВ (С БОТАМИ) ===
+// ==========================================
+const botNames = ["ProGamer", "Вася_228", "xX_Sniper_Xx", "Kotik", "NoobMaster", "Саня", "Toxic", "Мастер", "Lexa", "Shadow", "Дима", "Крутой", "Boss", "Игрок007", "Снайпер"];
+
+function switchLBTab(game) {
+  // Обновляем внешний вид вкладок
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + game).classList.add('active');
+  
+  const list = document.getElementById('lb-list');
+  list.innerHTML = '';
+  
+  // Получаем рекорд игрока
+  const playerScore = parseInt(getData('best-' + game) || 0);
+  const profile = JSON.parse(getData('profile') || '{"name":"Игрок", "avatar":"😎"}');
+  
+  // Генерируем ботов (базовое число зависит от рекорда игрока, чтобы боты были чуть сильнее или слабее)
+  let players = [];
+  let botCount = 9;
+  
+  for (let i = 0; i < botCount; i++) {
+    // Боты генерируются от 10 до (рекорд игрока * 1.5 + 20)
+    let botScore = Math.floor(Math.random() * (playerScore * 1.5 + 20)) + 5;
+    players.push({
+      name: botNames[Math.floor(Math.random() * botNames.length)] + Math.floor(Math.random() * 99),
+      score: botScore,
+      isMe: false
+    });
+  }
+  
+  // Добавляем игрока
+  players.push({
+    name: profile.name,
+    score: playerScore,
+    isMe: true,
+    avatar: profile.avatar
+  });
+  
+  // Сортируем по очкам (по убыванию)
+  players.sort((a, b) => b.score - a.score);
+  
+  // Отрисовываем
+  players.forEach((p, index) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (p.isMe ? ' me' : '');
+    
+    let rankClass = '';
+    if (index === 0) rankClass = 'gold';
+    else if (index === 1) rankClass = 'silver';
+    else if (index === 2) rankClass = 'bronze';
+    
+    row.innerHTML = `
+      <div class="lb-rank ${rankClass}">${index + 1}.</div>
+      <div class="lb-name">${p.name}</div>
+      <div class="lb-score">${p.score}</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ==========================================
+// === ИГРА 1: ПОЙМАЙ ТЕЛЕФОН ===
+// ==========================================
+let runningCatch = false, scoreCatch = 0, phones = [], basketX = 120;
+const basket = document.getElementById('basket'), catchBox = document.getElementById('game-catch');
+
+function resetCatch() {
+  runningCatch = false; scoreCatch = 0;
+  phones.forEach(p => p.remove()); phones = [];
+  document.getElementById('score-catch').textContent = 0;
+  document.getElementById('best-catch').textContent = getData('best-catch') || 0;
+  document.getElementById('catch-overlay').style.display = 'flex';
+  basketX = 120; basket.style.left = basketX + 'px';
+}
+
+function startCatch() {
+  document.getElementById('catch-overlay').style.display = 'none';
+  runningCatch = true;
+  requestAnimationFrame(loopCatch);
+  spawnCatch();
+}
+
+catchBox.addEventListener('mousemove', e => {
+  if (!runningCatch) return;
+  const rect = catchBox.getBoundingClientRect();
+  basketX = Math.max(0, Math.min(rect.width - 80, e.clientX - rect.left - 40));
+  basket.style.left = basketX + 'px';
+});
+catchBox.addEventListener('touchmove', e => {
+  if (!runningCatch) return;
+  e.preventDefault();
+  const rect = catchBox.getBoundingClientRect();
+  basketX = Math.max(0, Math.min(rect.width - 80, e.touches[0].clientX - rect.left - 40));
+  basket.style.left = basketX + 'px';
+}, { passive: false });
+
+function spawnCatch() {
+  if (!runningCatch) return;
+  const el = document.createElement('div');
+  el.className = 'phone';
+  el.style.left = (Math.random() * (catchBox.clientWidth - 30)) + 'px';
+  el.style.top = '-60px';
+  catchBox.appendChild(el);
+  phones.push({ el, y: -60, speed: 150 + Math.random() * 100 });
+  setTimeout(spawnCatch, Math.max(400, 1000 - scoreCatch * 10));
+}
+
+function loopCatch() {
+  if (!runningCatch) return;
+  const h = catchBox.clientHeight;
+  for (let i = phones.length - 1; i >= 0; i--) {
+    const p = phones[i];
+    p.y += p.speed * 0.016;
+    p.el.style.top = p.y + 'px';
+    if (p.y + 55 >= h - 40 && p.y + 55 <= h - 10) {
+      const px = parseFloat(p.el.style.left);
+      if (px + 30 > basketX && px < basketX + 80) {
+        scoreCatch++;
+        document.getElementById('score-catch').textContent = scoreCatch;
+        p.el.remove(); phones.splice(i, 1); continue;
+      }
+    }
+    if (p.y > h) { p.el.remove(); phones.splice(i, 1); gameOverCatch(); return; }
+  }
+  requestAnimationFrame(loopCatch);
+}
+
+function gameOverCatch() {
+  runningCatch = false;
+  const best = parseInt(getData('best-catch') || 0);
+  if (scoreCatch > best) {
+    saveData('best-catch', scoreCatch);
+    document.getElementById('best-catch').textContent = scoreCatch;
+    showRecord();
+  }
+  document.getElementById('catch-overlay').innerHTML = `<h2>Игра окончена!<br>Счёт: ${scoreCatch}</h2><button class="tool-btn" onclick="startCatch()">Ещё раз</button>`;
+  document.getElementById('catch-overlay').style.display = 'flex';
+}
+
+// ==========================================
+// === ИГРА 2: НАЖМИ НА КРУГ ===
+// ==========================================
+let runningTap = false, scoreTap = 0, tapTimeout;
+const tapBox = document.getElementById('game-tap');
+
+function resetTap() {
+  runningTap = false; scoreTap = 0; clearTimeout(tapTimeout);
+  document.getElementById('score-tap').textContent = 0;
+  document.getElementById('best-tap').textContent = getData('best-tap') || 0;
+  document.getElementById('tap-overlay').style.display = 'flex';
+}
+
+function startTap() {
+  document.getElementById('tap-overlay').style.display = 'none';
+  runningTap = true; createTapCircle();
+}
+
+function createTapCircle() {
+  if (!runningTap) return;
+  const old = document.querySelector('.tap-circle'); if (old) old.remove();
+  const size = Math.max(25, 70 - scoreTap * 2);
+  const el = document.createElement('div');
+  el.className = 'tap-circle';
+  el.style.width = size + 'px'; el.style.height = size + 'px';
+  el.style.left = (Math.random() * (tapBox.clientWidth - size - 20) + 10) + 'px';
+  el.style.top = (Math.random() * (tapBox.clientHeight - size - 20) + 10) + 'px';
+  el.addEventListener('mousedown', hitTap);
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); hitTap(); }, {passive: false});
+  tapBox.appendChild(el);
+  tapTimeout = setTimeout(() => gameOverTap("Не успел!"), Math.max(400, 1500 - scoreTap * 40));
+}
+
+function hitTap() {
+  if (!runningTap) return;
+  scoreTap++;
+  document.getElementById('score-tap').textContent = scoreTap;
+  clearTimeout(tapTimeout); createTapCircle();
+}
+
+function gameOverTap(msg) {
+  runningTap = false; clearTimeout(tapTimeout);
+  const old = document.querySelector('.tap-circle'); if (old) old.remove();
+  const best = parseInt(getData('best-tap') || 0);
+  if (scoreTap > best) {
+    saveData('best-tap', scoreTap);
+    document.getElementById('best-tap').textContent = scoreTap;
+    showRecord();
+  }
+  document.getElementById('tap-overlay').innerHTML = `<h2>${msg}<br>Счёт: ${scoreTap}</h2><button class="tool-btn" onclick="startTap()">Ещё раз</button>`;
+  document.getElementById('tap-overlay').style.display = 'flex';
+}
+
+// ==========================================
+// === ИГРА 3: ПАРКУР ===
+// ==========================================
+const canvas = document.getElementById('parkour-canvas');
+const ctx = canvas.getContext('2d');
+let runningParkour = false;
+let pLevel = 1;
+let mapData = [];
+const BLOCK = 30;
+let cameraX = 0;
+let keys = { left: false, right: false, up: false };
+
+const player = { x: 50, y: 0, w: BLOCK, h: BLOCK, vx: 0, vy: 0, isGrounded: false };
+const GRAVITY = 0.5;
+const JUMP_FORCE = -10;
+const SPEED = 4;
+
+function resetParkour() {
+  runningParkour = false;
+  document.getElementById('parkour-overlay').style.display = 'flex';
+  document.getElementById('parkour-level').textContent = pLevel;
+  document.getElementById('best-parkour').textContent = getData('best-parkour') || 0;
+}
+
+document.getElementById('btn-left').addEventListener('mousedown', () => keys.left = true);
+document.getElementById('btn-left').addEventListener('mouseup', () => keys.left = false);
+document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+document.getElementById('btn-left').addEventListener('touchend', () => keys.left = false);
+
+document.getElementById('btn-right').addEventListener('mousedown', () => keys.right = true);
+document.getElementById('btn-right').addEventListener('mouseup', () => keys.right = false);
+document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+document.getElementById('btn-right').addEventListener('touchend', () => keys.right = false);
+
+document.getElementById('btn-jump').addEventListener('mousedown', () => keys.up = true);
+document.getElementById('btn-jump').addEventListener('mouseup', () => keys.up = false);
+document.getElementById('btn-jump').addEventListener('touchstart', (e) => { e.preventDefault(); keys.up = true; });
+document.getElementById('btn-jump').addEventListener('touchend', () => keys.up = false);
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.up = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.up = false;
+});
+
+function generateMap() {
+  mapData = [];
+  const len = 80 + pLevel * 10;
+  const groundY = 12; 
+  
+  for (let x = 0; x < len; x++) {
+    mapData[x] = [];
+    for (let y = 0; y < 15; y++) {
+      mapData[x][y] = 0;
+      if (y >= groundY) mapData[x][y] = 1;
+    }
+  }
+
+  let x = 10;
+  while (x < len - 10) {
+    let obs = Math.floor(Math.random() * 3);
+    let width = obs === 0 ? Math.floor(Math.random() * 3) + 1 : 1;
+    
+    if (obs === 0) {
+      for (let i = 0; i < width; i++) {
+        if (x + i < len - 5) {
+           mapData[x + i][groundY - 1] = 1;
+           if (Math.random() > 0.7) mapData[x + i][groundY - 2] = 1;
+        }
+      }
+    } else if (obs === 1) {
+      mapData[x][groundY - 1] = 2;
+    }
+    x += width + Math.floor(Math.random() * 3) + 2;
+  }
+  mapData[len - 5][groundY - 1] = 3;
+  mapData[len - 5][groundY - 2] = 3;
+}
+
+function startParkour() {
+  document.getElementById('parkour-overlay').style.display = 'none';
+  runningParkour = true;
+  cameraX = 0;
+  canvas.width = document.getElementById('game-parkour').clientWidth;
+  canvas.height = document.getElementById('game-parkour').clientHeight;
+  generateMap();
+  player.x = 50;
+  player.y = (12 * BLOCK) - BLOCK;
+  player.vx = 0; player.vy = 0;
+  requestAnimationFrame(loopParkour);
+}
+
+function loopParkour() {
+  if (!runningParkour) return;
+  
+  if (keys.left) player.vx = -SPEED;
+  else if (keys.right) player.vx = SPEED;
+  else player.vx = 0;
+  
+  if (keys.up && player.isGrounded) {
+    player.vy = JUMP_FORCE;
+    player.isGrounded = false;
+  }
+  
+  player.vy += GRAVITY;
+  if (player.vy > 15) player.vy = 15;
+  
+  player.x += player.vx;
+  handleCollisions('x');
+  
+  player.y += player.vy;
+  player.isGrounded = false;
+  handleCollisions('y');
+  
+  if (player.y > canvas.height) { gameOverParkour(); return; }
+  
+  let pcx = Math.floor((player.x + player.w/2) / BLOCK);
+  let pcy = Math.floor((player.y + player.h/2) / BLOCK);
+  if (mapData[pcx] && mapData[pcx][pcy] === 3) { winParkour(); return; }
+  
+  cameraX = player.x - canvas.width / 2;
+  if (cameraX < 0) cameraX = 0;
+  
+  drawParkour();
+  requestAnimationFrame(loopParkour);
+}
+
+function handleCollisions(axis) {
+  const leftCol = Math.floor(player.x / BLOCK);
+  const rightCol = Math.floor((player.x + player.w - 1) / BLOCK);
+  const topRow = Math.floor(player.y / BLOCK);
+  const bottomRow = Math.floor((player.y + player.h - 1) / BLOCK);
+  
+  for (let col = leftCol; col <= rightCol; col++) {
+    for (let row = topRow; row <= bottomRow; row++) {
+      if (mapData[col] && mapData[col][row] === 1) {
+        if (axis === 'x') {
+          if (player.vx > 0) player.x = col * BLOCK - player.w;
+          else if (player.vx < 0) player.x = (col + 1) * BLOCK;
+          player.vx = 0;
+        } else {
+          if (player.vy > 0) {
+            player.y = row * BLOCK - player.h;
+            player.vy = 0;
+            player.isGrounded = true;
+          } else if (player.vy < 0) {
+            player.y = (row + 1) * BLOCK;
+            player.vy = 0;
+          }
+        }
+      }
+      if (mapData[col] && mapData[col][row] === 2) { gameOverParkour(); }
+    }
+  }
+}
+
+function drawParkour() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for (let col = 0; col < mapData.length; col++) {
+    for (let row = 0; row < mapData[col].length; row++) {
+      const type = mapData[col][row];
+      if (type === 0) continue;
+      const x = col * BLOCK - cameraX;
+      const y = row * BLOCK;
+      if (x < -BLOCK || x > canvas.width) continue;
+      
+      if (type === 1) { 
+        ctx.fillStyle = '#2d3b2d'; ctx.fillRect(x, y, BLOCK, BLOCK);
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(x, y, BLOCK, BLOCK);
+      } else if (type === 2) { 
+        ctx.fillStyle = '#888'; ctx.beginPath();
+        ctx.moveTo(x, y + BLOCK); ctx.lineTo(x + BLOCK/2, y); ctx.lineTo(x + BLOCK, y + BLOCK);
+        ctx.fill(); ctx.stroke();
+      } else if (type === 3) { 
+        ctx.fillStyle = '#000'; ctx.fillRect(x + BLOCK/2 - 2, y - 30, 4, BLOCK + 30);
+        ctx.fillStyle = '#e94560'; ctx.beginPath();
+        ctx.moveTo(x + BLOCK/2 + 2, y - 30); ctx.lineTo(x + BLOCK/2 + 25, y - 20); ctx.lineTo(x + BLOCK/2 + 2, y - 10);
+        ctx.fill();
+      }
+    }
+  }
+  
+  const px = player.x - cameraX;
+  const py = player.y;
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(px + player.w/2, py + 8, 6, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = '#000'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(px + player.w/2, py + 14); ctx.lineTo(px + player.w/2, py + 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px + player.w/2, py + 22); ctx.lineTo(px + player.w/2 - 6, py + BLOCK); ctx.moveTo(px + player.w/2, py + 22); ctx.lineTo(px + player.w/2 + 6, py + BLOCK); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px + player.w/2, py + 16); ctx.lineTo(px + player.w/2 - 8, py + 20); ctx.moveTo(px + player.w/2, py + 16); ctx.lineTo(px + player.w/2 + 8, py + 20); ctx.stroke();
+}
+
+function gameOverParkour() {
+  runningParkour = false;
+  const best = parseInt(getData('best-parkour') || 0);
+  if (pLevel > best) {
+    saveData('best-parkour', pLevel);
+    document.getElementById('best-parkour').textContent = pLevel;
+    showRecord();
+  }
+  document.getElementById('parkour-overlay').innerHTML = `<h2>Ты упал или наткнулся на шипы!</h2><p>Достигнут уровень: ${pLevel}</p><button class="tool-btn" onclick="startParkour()">Ещё раз</button>`;
+  document.getElementById('parkour-overlay').style.display = 'flex';
+}
+
+function winParkour() {
+  runningParkour = false;
+  pLevel++;
+  document.getElementById('parkour-level').textContent = pLevel;
+  const best = parseInt(getData('best-parkour') || 0);
+  if (pLevel > best) {
+    saveData('best-parkour', pLevel);
+    document.getElementById('best-parkour').textContent = pLevel;
+    showRecord();
+  }
+  document.getElementById('parkour-overlay').innerHTML = `<h2>Уровень пройден! 🎉</h2><button class="tool-btn" onclick="startParkour()">Следующий уровень</button>`;
+  document.getElementById('parkour-overlay').style.display = 'flex';
+}
+
+// ==========================================
+// === ИГРА 4: РИСУЙ ===
+// ==========================================
+const drawCanvas = document.getElementById('draw-canvas');
+const drawCtx = drawCanvas.getContext('2d');
+let isDrawing = false;
+let currentColor = '#000000';
+let currentTool = 'pencil';
+let currentEditingSlot = -1;
+let drawings = [];
+
+function initDraw() {
+  showGallery();
+}
+
+function showGallery() {
+  document.getElementById('draw-gallery').style.display = 'flex';
+  document.getElementById('canvas-container').style.display = 'none';
+  document.getElementById('draw-toolbar').style.display = 'none';
+  
+  drawings = JSON.parse(getData('drawings') || "[]");
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = '';
+  
+  for (let i = 0; i < 5; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'gallery-slot';
+    if (drawings[i]) {
+      const img = document.createElement('img');
+      img.src = drawings[i];
+      slot.appendChild(img);
+      slot.onclick = () => openDrawing(i);
+    } else if (i === drawings.length) {
+      slot.classList.add('add-new');
+      slot.innerHTML = '+';
+      slot.onclick = () => openDrawing(-1);
+    } else {
+      slot.style.background = '#ccc';
+    }
+    grid.appendChild(slot);
+  }
+}
+
+function openDrawing(slotIndex) {
+  document.getElementById('draw-gallery').style.display = 'none';
+  document.getElementById('canvas-container').style.display = 'block';
+  document.getElementById('draw-toolbar').style.display = 'flex';
+  
+  const container = document.getElementById('canvas-container');
+  drawCanvas.width = container.clientWidth;
+  drawCanvas.height = container.clientHeight;
+  
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  
+  if (slotIndex !== -1) {
+    currentEditingSlot = slotIndex;
+    const img = new Image();
+    img.onload = () => drawCtx.drawImage(img, 0, 0);
+    img.src = drawings[slotIndex];
+  } else {
+    currentEditingSlot = -1;
+  }
+}
+
+function saveCurrentDrawing() {
+  const dataUrl = drawCanvas.toDataURL();
+  if (currentEditingSlot === -1) {
+    if (drawings.length >= 5) { alert("Можно сохранить максимум 5 рисунков!"); return; }
+    drawings.push(dataUrl);
+  } else {
+    drawings[currentEditingSlot] = dataUrl;
+  }
+  saveData('drawings', JSON.stringify(drawings));
+  alert('Рисунок сохранен!');
+  showGallery();
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function setColor(color) {
+  currentColor = color;
+  currentTool = 'pencil';
+  document.getElementById('color-modal').style.display = 'none';
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.draw-toolbar .tool-btn')[3].classList.add('active');
+}
+
+function closeColorModal(e) {
+  if (e.target.id === 'color-modal') e.target.style.display = 'none';
+}
+
+drawCanvas.addEventListener('mousedown', startDraw);
+drawCanvas.addEventListener('mousemove', draw);
+drawCanvas.addEventListener('mouseup', stopDraw);
+drawCanvas.addEventListener('mouseleave', stopDraw);
+
+drawCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); }, {passive: false});
+drawCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
+drawCanvas.addEventListener('touchend', stopDraw);
+
+function getPos(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function startDraw(e) {
+  isDrawing = true;
+  const pos = getPos(e);
+  drawCtx.beginPath();
+  drawCtx.moveTo(pos.x, pos.y);
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  const pos = getPos(e);
+  
+  if (currentTool === 'eraser') {
+    drawCtx.globalCompositeOperation = 'destination-out';
+    drawCtx.lineWidth = 20;
+  } else {
+    drawCtx.globalCompositeOperation = 'source-over';
+    drawCtx.strokeStyle = currentColor;
+    drawCtx.lineWidth = 4;
+  }
+  
+  drawCtx.lineTo(pos.x, pos.y);
+  drawCtx.stroke();
+}
+
+function stopDraw() { isDrawing = false; }
+
+// === СТАРТ ===
+window.onload = () => { 
+  updateProfileUI(); 
+};
+</script>
+</body>
+  </html>
